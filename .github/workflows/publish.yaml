@@ -1,0 +1,41 @@
+name: Publish
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get version
+        id: version
+        uses: notiz-dev/github-action-json-property@release
+        with:
+          path: 'Flow.Launcher.Plugin.JetBrainsIDEProjects\plugin.json'
+          prop_path: 'Version'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 5.0.x
+        
+      - name: Build
+        shell: pwsh
+        run: |
+          dotnet publish 'Flow.Launcher.Plugin.JetBrainsIDEProjects\Flow.Launcher.Plugin.JetBrainsIDEProjects.csproj' -c Release -o "JetBrainsIDEProjects"
+          Compress-Archive -Path JetBrainsIDEProjects/* -DestinationPath Flow.Launcher.Plugin.JetBrainsIDEProjects.zip -Force
+          
+      - name: Publish
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "Flow.Launcher.Plugin.JetBrainsIDEProjects.zip"
+          tag_name: "v${{steps.version.outputs.prop}}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

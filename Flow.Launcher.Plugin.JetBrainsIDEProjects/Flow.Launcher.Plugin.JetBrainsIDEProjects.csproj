@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <AssemblyName>Flow.Launcher.Plugin.JetBrainsIDEProjects</AssemblyName>
+    <PackageId>Flow.Launcher.Plugin.JetBrainsIDEProjects</PackageId>
+    <Authors>kenty02</Authors>
+    <PackageProjectUrl>https://github.com/kenty02/Flow.Launcher.Plugin.JetBrainsIDEProjects</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kenty02/Flow.Launcher.Plugin.JetBrainsIDEProjects</RepositoryUrl>
+    <PackageTags>flow-launcher flow-plugin</PackageTags>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugSymbols>false</DebugSymbols>
+    <DebugType>None</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="plugin.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="icon.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Flow.Launcher.Plugin" Version="3.0.1" />
+  </ItemGroup>
+
+</Project>

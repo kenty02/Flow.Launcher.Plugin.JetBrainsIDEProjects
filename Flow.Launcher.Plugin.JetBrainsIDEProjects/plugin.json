@@ -1,0 +1,12 @@
+{
+    "ID": "E1E3DB9C-632D-4187-A5B4-EED6E09CACA7",
+    "ActionKeyword": "jb",
+    "Name": "JetBrainsIDEProjects",
+    "Description": "Search projects in JetBrains IDEs",
+    "Author": "kenty02",
+    "Version": "1.0.0",
+    "Language": "csharp",
+    "Website": "https://github.com/kenty02/Flow.Launcher.Plugin.JetBrainsIDEProjects",
+    "IcoPath": "icon.png",
+    "ExecuteFileName": "Flow.Launcher.Plugin.JetBrainsIDEProjects.dll"
+}
