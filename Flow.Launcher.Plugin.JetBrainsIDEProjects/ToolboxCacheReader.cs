@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -15,7 +16,9 @@ internal static class ToolboxCacheReader
     private static readonly string IntelliJProjectsPath =
         Path.Combine(ToolboxDirectoryPath, "cache", "intellij_projects.json");
 
-    private static readonly string FallbackIconPath = Path.Combine("app.png");
+    // todo make this configurable
+    private static readonly string ToolboxScriptsPath =
+        Path.Combine(ToolboxDirectoryPath, "scripts");
 
     public static List<Project> Read()
     {
@@ -32,29 +35,41 @@ internal static class ToolboxCacheReader
 
     public static ApplicationInfo GetApplicationInfo(string applicationId, string channelId)
     {
+        // we must determine the script name first
+        // this would be much simpler if we have all applicationId to script name mappings
         var applicationChannelPath = Path.Combine(ToolboxDirectoryPath, "apps", applicationId, channelId);
-        // find folder whose name ends with digit
-        var applicationDirectoryPath = Directory.GetDirectories(applicationChannelPath)
-            .FirstOrDefault(x => char.IsDigit(x[^1]));
-        if (applicationDirectoryPath == null)
-        {
-            throw new DirectoryNotFoundException($"Directory not found: {applicationChannelPath}");
-        }
-        var applicationBinPath = Path.Combine(applicationDirectoryPath, "bin");
 
-        var icoFile = Directory.GetFiles(applicationBinPath, "*.ico").FirstOrDefault();
+        string TryFindIcoFile(string applicationDirectoryPath)
+        {
+            var applicationBinPath = Path.Combine(applicationDirectoryPath, "bin");
+
+            return !Directory.Exists(applicationBinPath) ? null : Directory.GetFiles(applicationBinPath, "*.ico").FirstOrDefault();
+        }
+
+        var icoFile = Directory.GetDirectories(applicationChannelPath).Where(x => char.IsDigit(x[^1]))
+            .Select(TryFindIcoFile).FirstOrDefault(x => x != null);
         if (icoFile == null)
         {
-            throw new FileNotFoundException(
-                $"ico file not found for {applicationId}: {applicationBinPath}");
+            throw new FileNotFoundException("Failed to determine application icon file.");
         }
 
-        // rewrite icoFile extension to bat
-        var applicationBatPath = Path.ChangeExtension(icoFile, ".bat");
+        var scriptName = Path.GetFileNameWithoutExtension(icoFile);
+        var scriptCmdPath = Path.Combine(ToolboxScriptsPath, scriptName + ".cmd");
+
+        // now we can determine the application path of correct version
+        var scriptCmdContent = File.ReadAllText(scriptCmdPath);
+        const string applicationPathRegex = @"\s\S+\.exe\s";
+        var applicationPath = System.Text.RegularExpressions.Regex.Match(scriptCmdContent, applicationPathRegex)
+            .Value.Trim();
+        var applicationDirPath = Path.GetDirectoryName(applicationPath);
+        if (applicationDirPath == null)
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {applicationPath}");
+        }
 
         var applicationInfo = new ApplicationInfo
         {
-            Path = applicationBatPath,
+            Path = scriptCmdPath,
             IcoFile = icoFile
         };
 
