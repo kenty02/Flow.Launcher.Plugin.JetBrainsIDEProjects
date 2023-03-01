@@ -23,21 +23,32 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             var applicationInfoCache = new Dictionary<string, ApplicationInfo>();
             foreach (var project in projects)
             {
-                var applicationId = project.DefaultOpenItem.ApplicationId;
-                var channelId = project.DefaultOpenItem.ChannelId;
-                if (!applicationInfoCache.ContainsKey(applicationId))
+                ApplicationInfo applicationInfo = null;
+                if (project.DefaultOpenItem != null)
                 {
-                    applicationInfoCache[applicationId] = ToolboxCacheReader.GetApplicationInfo(applicationId, channelId);
+                    var applicationId = project.DefaultOpenItem.ApplicationId;
+                    var channelId = project.DefaultOpenItem.ChannelId;
+                    if (!applicationInfoCache.ContainsKey(applicationId))
+                    {
+                        applicationInfoCache[applicationId] =
+                            ToolboxCacheReader.GetApplicationInfo(applicationId, channelId);
+                    }
+
+                    applicationInfo = applicationInfoCache[applicationId];
                 }
 
-                var applicationInfo = applicationInfoCache[applicationId];
                 var result = new Result
                 {
                     Title = project.Name,
                     SubTitle = project.Path,
-                    IcoPath = applicationInfo.IcoFile,
+                    IcoPath = applicationInfo?.IcoFile?? "icon.png",
                     Action = _ =>
                     {
+                        if (applicationInfo == null)
+                        {
+                            _context.API.ShowMsgError("Error", "Failed to determine application path. It is possible that associated application is not installed.");
+                            return false;
+                        }
                         _context.API.ShellRun(applicationInfo.Path + " " + project.Path);
                         return true;
                     },

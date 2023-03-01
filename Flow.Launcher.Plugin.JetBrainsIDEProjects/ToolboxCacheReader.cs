@@ -96,7 +96,7 @@ public class Project
     public string Path { get; set; }
 
     /// <summary>
-    /// 
+    /// null if application is not installed
     /// </summary>
     [JsonPropertyName("defaultOpenItem")]
     public DefaultOpenItem DefaultOpenItem { get; set; }
