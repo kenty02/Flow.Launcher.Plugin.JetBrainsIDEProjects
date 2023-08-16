@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -12,70 +11,101 @@ internal static class ToolboxCacheReader
 {
     private static readonly string ToolboxDirectoryPath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JetBrains", "Toolbox");
-
+    
     private static readonly string IntelliJProjectsPath =
         Path.Combine(ToolboxDirectoryPath, "cache", "intellij_projects.json");
+    
+    private static readonly string StatePath =
+        Path.Combine(ToolboxDirectoryPath, "state.json");
 
-    // todo make this configurable
-    private static readonly string ToolboxScriptsPath =
-        Path.Combine(ToolboxDirectoryPath, "scripts");
+    public static List<ApplicationInfo> GetApplications()
+    {
+        if (!File.Exists(StatePath))
+        {
+            throw new FileNotFoundException($"File not found: {StatePath}. Is toolbox V2 installed?");
+        }
 
-    public static List<Project> Read()
+        using var stateStream = File.OpenRead(StatePath);
+        var state = JsonSerializer.Deserialize<State>(stateStream);
+
+        var applications = new List<ApplicationInfo>();
+        foreach (var tool in state.Tools)
+        {
+            var path = Path.GetFullPath(Path.Combine(tool.InstallLocation, tool.LaunchCommand));
+            var icoFile =                 
+                Directory.GetParent(path)
+                    ?.GetFiles("*.ico")
+                    .FirstOrDefault()
+                    ?.FullName
+                        ?? throw new FileNotFoundException("Failed to determine application icon file.");
+            
+            applications.Add(new ApplicationInfo
+            {
+                Path = Path.Combine(tool.InstallLocation, tool.LaunchCommand),
+                ApplicationId = tool.ToolId,
+                BuildNumber = tool.BuildNumber,
+                IcoFile = icoFile
+            });
+        }
+
+        return applications;
+    }
+
+    public static List<ProjectInfo> GetProjects(List<ApplicationInfo> applications)
     {
         if (!File.Exists(IntelliJProjectsPath))
         {
             throw new FileNotFoundException($"File not found: {IntelliJProjectsPath}. Is toolbox installed?");
         }
 
-        var json = File.ReadAllText(IntelliJProjectsPath);
-        var projects = JsonSerializer.Deserialize<List<Project>>(json);
+        using var projectsStream = File.OpenRead(IntelliJProjectsPath);
+        var intellijProjects = JsonSerializer.Deserialize<List<Project>>(projectsStream);
+
+        var projects = new List<ProjectInfo>();
+
+        foreach (var project in intellijProjects)
+        {
+            if (project.DefaultOpenItem is null)
+                continue;
+
+            var openItem = project.OpenItems.Find(openItem =>
+                openItem.ApplicationId == project.DefaultOpenItem.ApplicationId
+                    && openItem.ChannelId == project.DefaultOpenItem.ChannelId
+            );
+
+            if (openItem is null)
+                continue;
+
+            var application = applications.Find(app =>
+                app.ApplicationId == openItem.ApplicationId &&
+                app.BuildNumber == openItem.Build
+            );
+            
+            projects.Add(new ProjectInfo
+            {
+                Path = project.Path,
+                Name = project.Name,
+                Application = application
+            });
+        }
 
         return projects;
     }
+}
 
-    public static ApplicationInfo GetApplicationInfo(string applicationId, string channelId)
-    {
-        // we must determine the script name first
-        // this would be much simpler if we have all applicationId to script name mappings
-        var applicationChannelPath = Path.Combine(ToolboxDirectoryPath, "apps", applicationId, channelId);
+public class ApplicationInfo
+{
+    public string Path { get; init; }
+    public string BuildNumber { get; init; }
+    public string ApplicationId { get; init; }
+    public string IcoFile { get; init; }
+}
 
-        string TryFindIcoFile(string applicationDirectoryPath)
-        {
-            var applicationBinPath = Path.Combine(applicationDirectoryPath, "bin");
-
-            return !Directory.Exists(applicationBinPath) ? null : Directory.GetFiles(applicationBinPath, "*.ico").FirstOrDefault();
-        }
-
-        var icoFile = Directory.GetDirectories(applicationChannelPath).Where(x => char.IsDigit(x[^1]))
-            .Select(TryFindIcoFile).FirstOrDefault(x => x != null);
-        if (icoFile == null)
-        {
-            throw new FileNotFoundException("Failed to determine application icon file.");
-        }
-
-        var scriptName = Path.GetFileNameWithoutExtension(icoFile);
-        var scriptCmdPath = Path.Combine(ToolboxScriptsPath, scriptName + ".cmd");
-
-        // now we can determine the application path of correct version
-        var scriptCmdContent = File.ReadAllText(scriptCmdPath);
-        const string applicationPathRegex = @"\s\S+\.exe\s";
-        var applicationPath = System.Text.RegularExpressions.Regex.Match(scriptCmdContent, applicationPathRegex)
-            .Value.Trim();
-        var applicationDirPath = Path.GetDirectoryName(applicationPath);
-        if (applicationDirPath == null)
-        {
-            throw new DirectoryNotFoundException($"Directory not found: {applicationPath}");
-        }
-
-        var applicationInfo = new ApplicationInfo
-        {
-            Path = scriptCmdPath,
-            IcoFile = icoFile
-        };
-
-
-        return applicationInfo;
-    }
+public class ProjectInfo
+{
+    public string Name { get; init; }
+    public string Path { get; init; }
+    public ApplicationInfo Application { get; init; }
 }
 
 /// <summary>
@@ -100,6 +130,12 @@ public class Project
     /// </summary>
     [JsonPropertyName("defaultOpenItem")]
     public DefaultOpenItem DefaultOpenItem { get; set; }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("openItems")]
+    public List<OpenItem> OpenItems { get; set; }
 }
 
 /// <summary>
@@ -120,8 +156,70 @@ public class DefaultOpenItem
     public string ChannelId { get; set; }
 }
 
-internal class ApplicationInfo
+/// <summary>
+/// 
+/// </summary>
+public class OpenItem
 {
-    [JsonPropertyName("path")] public string Path { get; init; }
-    [JsonPropertyName("icoFile")] public string IcoFile { get; init; }
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("id")]
+    public string ApplicationId { get; set; }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("channel_id")]
+    public string ChannelId { get; set; }
+            
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("build")]
+    public string Build { get; set; }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("is_installed")]
+    public bool IsInstalled { get; set; }
+}
+
+internal class State
+{
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("tools")]
+    public List<Tool> Tools { get; set; }
+}
+
+internal class Tool
+{
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("channelId")]
+    public string ChannelId { get; set; }
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("toolId")]
+    public string ToolId { get; set; }
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("buildNumber")]
+    public string BuildNumber { get; set; }
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("installLocation")]
+    public string InstallLocation { get; set; }
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonPropertyName("launchCommand")]
+    public string LaunchCommand { get; set; }
 }

@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using Flow.Launcher.Plugin;
 
 namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 {
@@ -18,43 +16,32 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
         /// <inheritdoc />
         public List<Result> Query(Query query)
         {
-            var projects = ToolboxCacheReader.Read();
+            var applications = ToolboxCacheReader.GetApplications();
+            var projects = ToolboxCacheReader.GetProjects(applications);
+            
             var results = new List<Result>();
-            var applicationInfoCache = new Dictionary<string, ApplicationInfo>();
+            
             foreach (var project in projects)
             {
-                ApplicationInfo applicationInfo = null;
-                if (project.DefaultOpenItem != null)
-                {
-                    var applicationId = project.DefaultOpenItem.ApplicationId;
-                    var channelId = project.DefaultOpenItem.ChannelId;
-                    if (!applicationInfoCache.ContainsKey(applicationId))
-                    {
-                        applicationInfoCache[applicationId] =
-                            ToolboxCacheReader.GetApplicationInfo(applicationId, channelId);
-                    }
+                var score = string.IsNullOrWhiteSpace(query.Search)
+                    ? 100
+                    : _context.API.FuzzySearch(query.Search, project.Name).Score;
 
-                    applicationInfo = applicationInfoCache[applicationId];
-                }
-
-                var result = new Result
+                if (score > 0)
                 {
-                    Title = project.Name,
-                    SubTitle = project.Path,
-                    IcoPath = applicationInfo?.IcoFile?? "icon.png",
-                    Action = _ =>
+                    results.Add(new Result
                     {
-                        if (applicationInfo == null)
+                        Title = project.Name,
+                        SubTitle = project.Path,
+                        IcoPath = project.Application?.IcoFile ?? "icon.png",
+                        Action = _ =>
                         {
-                            _context.API.ShowMsgError("Error", "Failed to determine application path. It is possible that associated application is not installed.");
-                            return false;
-                        }
-                        _context.API.ShellRun(applicationInfo.Path + " " + project.Path);
-                        return true;
-                    },
-                    Score = _context.API.FuzzySearch(query.Search, project.Name).Score
-                };
-                results.Add(result);
+                            _context.API.ShellRun(project.Path, project.Application.Path);
+                            return true;
+                        },
+                        Score = score
+                    });
+                }
             }
 
             return results;

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net7.0-windows</TargetFramework>
     <AssemblyName>Flow.Launcher.Plugin.JetBrainsIDEProjects</AssemblyName>
     <PackageId>Flow.Launcher.Plugin.JetBrainsIDEProjects</PackageId>
     <Authors>kenty02</Authors>
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Flow.Launcher.Plugin" Version="3.0.1" />
+    <PackageReference Include="Flow.Launcher.Plugin" Version="4.1.1" />
   </ItemGroup>
 
 </Project>
