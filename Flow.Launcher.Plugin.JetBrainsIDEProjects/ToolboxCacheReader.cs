@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -17,6 +18,8 @@ internal static class ToolboxCacheReader
     
     private static readonly string StatePath =
         Path.Combine(ToolboxDirectoryPath, "state.json");
+    
+    private static readonly string[] BlacklistedToolIds = {"Space"};
 
     public static List<ApplicationInfo> GetApplications()
     {
@@ -31,6 +34,10 @@ internal static class ToolboxCacheReader
         var applications = new List<ApplicationInfo>();
         foreach (var tool in state.Tools)
         {
+            if (BlacklistedToolIds.Contains(tool.ToolId))
+            {
+                continue;
+            }
             var path = Path.GetFullPath(Path.Combine(tool.InstallLocation, tool.LaunchCommand));
             var icoFile =                 
                 Directory.GetParent(path)
