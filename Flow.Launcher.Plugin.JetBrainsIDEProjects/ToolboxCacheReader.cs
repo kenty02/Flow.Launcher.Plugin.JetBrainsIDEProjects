@@ -12,13 +12,13 @@ internal static class ToolboxCacheReader
 {
     private static readonly string ToolboxDirectoryPath =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JetBrains", "Toolbox");
-    
+
     private static readonly string IntelliJProjectsPath =
         Path.Combine(ToolboxDirectoryPath, "cache", "intellij_projects.json");
-    
+
     private static readonly string StatePath =
         Path.Combine(ToolboxDirectoryPath, "state.json");
-    
+
     private static readonly string[] BlacklistedToolIds = {"Space"};
 
     public static List<ApplicationInfo> GetApplications()
@@ -34,18 +34,18 @@ internal static class ToolboxCacheReader
         var applications = new List<ApplicationInfo>();
         foreach (var tool in state.Tools)
         {
-            if (BlacklistedToolIds.Contains(tool.ToolId))
+            if (BlacklistedToolIds.Contains(tool.ToolId) || tool.LaunchCommand == "")
             {
                 continue;
             }
             var path = Path.GetFullPath(Path.Combine(tool.InstallLocation, tool.LaunchCommand));
-            var icoFile =                 
+            var icoFile =
                 Directory.GetParent(path)
                     ?.GetFiles("*.ico")
                     .FirstOrDefault()
                     ?.FullName
                         ?? throw new FileNotFoundException("Failed to determine application icon file.");
-            
+
             applications.Add(new ApplicationInfo
             {
                 Path = Path.Combine(tool.InstallLocation, tool.LaunchCommand),
@@ -87,7 +87,7 @@ internal static class ToolboxCacheReader
                 app.ApplicationId == openItem.ApplicationId &&
                 app.BuildNumber == openItem.Build
             );
-            
+
             projects.Add(new ProjectInfo
             {
                 Path = project.Path,
@@ -116,18 +116,18 @@ public class ProjectInfo
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 public class Project
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("name")]
     public string Name { get; set; }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("path")]
     public string Path { get; set; }
@@ -137,57 +137,57 @@ public class Project
     /// </summary>
     [JsonPropertyName("defaultOpenItem")]
     public DefaultOpenItem DefaultOpenItem { get; set; }
-    
+
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("openItems")]
     public List<OpenItem> OpenItems { get; set; }
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 public class DefaultOpenItem
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("application_id")]
     public string ApplicationId { get; set; }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("channel_id")]
     public string ChannelId { get; set; }
 }
 
 /// <summary>
-/// 
+///
 /// </summary>
 public class OpenItem
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("id")]
     public string ApplicationId { get; set; }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("channel_id")]
     public string ChannelId { get; set; }
-            
+
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("build")]
     public string Build { get; set; }
-    
+
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("is_installed")]
     public bool IsInstalled { get; set; }
@@ -196,7 +196,7 @@ public class OpenItem
 internal class State
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("tools")]
     public List<Tool> Tools { get; set; }
@@ -205,27 +205,27 @@ internal class State
 internal class Tool
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("channelId")]
     public string ChannelId { get; set; }
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("toolId")]
     public string ToolId { get; set; }
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("buildNumber")]
     public string BuildNumber { get; set; }
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("installLocation")]
     public string InstallLocation { get; set; }
     /// <summary>
-    /// 
+    ///
     /// </summary>
     [JsonPropertyName("launchCommand")]
     public string LaunchCommand { get; set; }

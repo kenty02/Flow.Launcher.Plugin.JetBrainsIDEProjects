@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 {
@@ -18,9 +19,9 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
         {
             var applications = ToolboxCacheReader.GetApplications();
             var projects = ToolboxCacheReader.GetProjects(applications);
-            
+
             var results = new List<Result>();
-            
+
             foreach (var project in projects)
             {
                 var score = string.IsNullOrWhiteSpace(query.Search)
