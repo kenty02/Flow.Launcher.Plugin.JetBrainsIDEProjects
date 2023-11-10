@@ -50,6 +50,7 @@ internal static class ToolboxCacheReader
             {
                 Path = Path.Combine(tool.InstallLocation, tool.LaunchCommand),
                 ApplicationId = tool.ToolId,
+                ChannelId = tool.ChannelId,
                 BuildNumber = tool.BuildNumber,
                 IcoFile = icoFile
             });
@@ -72,20 +73,19 @@ internal static class ToolboxCacheReader
 
         foreach (var project in intellijProjects)
         {
-            if (project.DefaultOpenItem is null)
+            if (project.DefaultNewOpenItem is null)
                 continue;
 
-            var openItem = project.OpenItems.Find(openItem =>
-                openItem.ApplicationId == project.DefaultOpenItem.ApplicationId
-                    && openItem.ChannelId == project.DefaultOpenItem.ChannelId
+            var openItem = project.NewOpenItems.Find(openItem =>
+                openItem.ChannelId == project.DefaultNewOpenItem
             );
 
             if (openItem is null)
                 continue;
 
             var application = applications.Find(app =>
-                app.ApplicationId == openItem.ApplicationId &&
-                app.BuildNumber == openItem.Build
+                app.ApplicationId == openItem.ToolId &&
+                app.ChannelId == openItem.ChannelId
             );
 
             projects.Add(new ProjectInfo
@@ -104,6 +104,7 @@ public class ApplicationInfo
 {
     public string Path { get; init; }
     public string BuildNumber { get; init; }
+    public string ChannelId { get; init; }
     public string ApplicationId { get; init; }
     public string IcoFile { get; init; }
 }
@@ -134,63 +135,35 @@ public class Project
 
     /// <summary>
     /// null if application is not installed
+    /// This is equal to channelId
     /// </summary>
-    [JsonPropertyName("defaultOpenItem")]
-    public DefaultOpenItem DefaultOpenItem { get; set; }
+    [JsonPropertyName("defaultNewOpenItem")]
+    public string DefaultNewOpenItem { get; set; }
 
     /// <summary>
     ///
     /// </summary>
-    [JsonPropertyName("openItems")]
-    public List<OpenItem> OpenItems { get; set; }
+    [JsonPropertyName("newOpenItems")]
+    public List<NewOpenItem> NewOpenItems { get; set; }
 }
+
 
 /// <summary>
 ///
 /// </summary>
-public class DefaultOpenItem
+public class NewOpenItem
 {
     /// <summary>
     ///
     /// </summary>
-    [JsonPropertyName("application_id")]
-    public string ApplicationId { get; set; }
+    [JsonPropertyName("toolId")]
+    public string ToolId { get; set; }
 
     /// <summary>
     ///
     /// </summary>
-    [JsonPropertyName("channel_id")]
+    [JsonPropertyName("channelId")]
     public string ChannelId { get; set; }
-}
-
-/// <summary>
-///
-/// </summary>
-public class OpenItem
-{
-    /// <summary>
-    ///
-    /// </summary>
-    [JsonPropertyName("id")]
-    public string ApplicationId { get; set; }
-
-    /// <summary>
-    ///
-    /// </summary>
-    [JsonPropertyName("channel_id")]
-    public string ChannelId { get; set; }
-
-    /// <summary>
-    ///
-    /// </summary>
-    [JsonPropertyName("build")]
-    public string Build { get; set; }
-
-    /// <summary>
-    ///
-    /// </summary>
-    [JsonPropertyName("is_installed")]
-    public bool IsInstalled { get; set; }
 }
 
 internal class State
