@@ -4,7 +4,7 @@
     "Name": "JetBrainsIDEProjects",
     "Description": "Search projects in JetBrains IDEs",
     "Author": "kenty02",
-    "Version": "2.1.0",
+    "Version": "3.0.0",
     "Language": "csharp",
     "Website": "https://github.com/kenty02/Flow.Launcher.Plugin.JetBrainsIDEProjects",
     "IcoPath": "icon.png",

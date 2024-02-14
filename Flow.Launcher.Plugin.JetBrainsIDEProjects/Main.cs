@@ -17,8 +17,23 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
         /// <inheritdoc />
         public List<Result> Query(Query query)
         {
-            var applications = ToolboxCacheReader.GetApplications();
-            var projects = ToolboxCacheReader.GetProjects(applications);
+            List<RecentProject> projects;
+            try {
+                var applications = RecentProjectsReader.GetApplications();
+                projects = RecentProjectsReader.GetRecentProjects(applications);
+            } catch (System.Exception e) {
+                return new List<Result>(
+                    new Result[] {
+                        new Result {
+                            Title = "Error reading JetBrains IDE projects",
+                            SubTitle = e.Message,
+                            Action = _ => false,
+                            IcoPath = "icon.png",
+                            Score = 0
+                        }
+                    }
+                    );
+            }
 
             var results = new List<Result>();
 
@@ -37,7 +52,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                         IcoPath = project.Application?.IcoFile ?? "icon.png",
                         Action = _ =>
                         {
-                            _context.API.ShellRun(project.Path, project.Application.Path);
+                            _context.API.ShellRun(project.Path, project.Application.ExePath);
                             return true;
                         },
                         Score = score
