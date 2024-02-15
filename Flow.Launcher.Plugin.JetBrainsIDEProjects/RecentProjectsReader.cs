@@ -159,14 +159,31 @@ internal static class RecentProjectsReader
                     continue;
                 }
 
+                // replace $USER_HOME$ with the actual user home directory
+                var path = entryKey.Replace("$USER_HOME$", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+                // Default project name set to directory name
                 var name = entryKey.Split("/").Last();
+
+                // When file .name inside .idea folder found,
+                // use that as project name
+                var projectNamePath = path.EndsWith(".sln") // Rider seems to have different .idea path
+                    ? Path.Combine(Path.GetDirectoryName(path), ".idea", $".idea.{Path.GetFileNameWithoutExtension(path)}", ".idea", ".name")
+                    : Path.Combine(path, ".idea", ".name");
+                var projectNameInfo = new FileInfo(projectNamePath);
+                if (projectNameInfo.Exists && projectNameInfo.Length > 1)
+                {
+                    name = File.ReadLines(projectNamePath).First();
+                }
+
+                // When attribute displayName found in project RecentProjectMetaInfo XML node,
+                // use that as project name
                 var metaInfoAttributes = entry.SelectSingleNode("value/RecentProjectMetaInfo")?.Attributes;
                 if (metaInfoAttributes?["displayName"] != null)
                 {
                     name = metaInfoAttributes["displayName"].Value;
                 }
-                // replace $USER_HOME$ with the actual user home directory
-                var path = entryKey.Replace("$USER_HOME$", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
                 //convert timestamp to DateTime
                 var timestamp =entry.SelectSingleNode("value/RecentProjectMetaInfo/option[@name='projectOpenTimestamp']")?.Attributes?["value"]?.Value;
                 if (timestamp is null)
