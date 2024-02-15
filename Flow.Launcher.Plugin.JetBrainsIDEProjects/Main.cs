@@ -52,7 +52,7 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                         IcoPath = project.Application?.IcoFile ?? "icon.png",
                         Action = _ =>
                         {
-                            _context.API.ShellRun(project.Path, project.Application.ExePath);
+                            _context.API.ShellRun($"\"{project.Path}\"", project.Application.ExePath);
                             return true;
                         },
                         Score = score
