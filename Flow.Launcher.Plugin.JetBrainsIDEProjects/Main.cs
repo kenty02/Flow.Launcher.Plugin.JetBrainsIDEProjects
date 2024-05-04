@@ -50,10 +50,19 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                         Title = project.Name,
                         SubTitle = project.Path,
                         IcoPath = project.Application?.IcoFile ?? "icon.png",
-                        Action = _ =>
+                        Action = actionContext =>
                         {
+                            var resetQuery = !actionContext.SpecialKeyState.ShiftPressed;
+                            var closeMainWindow = !actionContext.SpecialKeyState.CtrlPressed;
+
+                            if (!closeMainWindow && resetQuery)
+                            {
+                                _context.API.ChangeQuery(_context.CurrentPluginMetadata.ActionKeyword + " ");
+                            }
+
                             _context.API.ShellRun($"\"{project.Path}\"", project.Application.ExePath);
-                            return true;
+                            
+                            return closeMainWindow;
                         },
                         Score = score
                     });
