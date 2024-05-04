@@ -1,17 +1,20 @@
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Windows.Controls;
+using Flow.Launcher.Plugin.JetBrainsIDEProjects.Settings;
 
 namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
 {
-    /// <inheritdoc />
-    public class JetBrainsIDEProjects : IPlugin
+    /// <inheritdoc cref="Flow.Launcher.Plugin.IPlugin" />
+    public class JetBrainsIDEProjects : IPlugin, ISettingProvider
     {
         private PluginInitContext _context;
+        private Settings.Settings _settings;
 
         /// <inheritdoc />
         public void Init(PluginInitContext context)
         {
             _context = context;
+            _settings = context.API.LoadSettingJsonStorage<Settings.Settings>();
         }
 
         /// <inheritdoc />
@@ -32,16 +35,22 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
                             Score = 0
                         }
                     }
-                    );
+                );
             }
 
             var results = new List<Result>();
 
             foreach (var project in projects)
             {
+                var stringToSearchIn = project.Name;
+                if (_settings.IncludePathInSearch)
+                {
+                    stringToSearchIn += " " + project.Path;
+                }
+                
                 var score = string.IsNullOrWhiteSpace(query.Search)
                     ? 100
-                    : _context.API.FuzzySearch(query.Search, project.Name).Score;
+                    : _context.API.FuzzySearch(query.Search, stringToSearchIn).Score;
 
                 if (score > 0)
                 {
@@ -61,6 +70,12 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
             }
 
             return results;
+        }
+
+        /// <inheritdoc />
+        public Control CreateSettingPanel()
+        {
+            return new SettingsControl(_settings);
         }
     }
 }
