@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Windows.Input;
 using System.Xml;
+using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 namespace Flow.Launcher.Plugin.JetBrainsIDEProjects;
 
@@ -25,7 +28,7 @@ internal static class RecentProjectsReader
         // handle like IntelliJ IDEA Ultimate
         if (displayName.StartsWith("IntelliJ IDEA"))
         {
-            return "IntelliJIdea";
+            return "(IntelliJIdea|IntelliJ|IdeaIC)";
         } else if (displayName.StartsWith("PyCharm"))
         {
             return "PyCharm";
@@ -82,7 +85,6 @@ internal static class RecentProjectsReader
     public static List<RecentProject> GetRecentProjects(List<ApplicationInfo> applications)
     {
         var projects = new List<RecentProject>();
-
         foreach (var application in applications)
         {
             if (!Directory.Exists(application.InstallLocation) || !File.Exists(application.ExePath))
@@ -102,12 +104,30 @@ internal static class RecentProjectsReader
             }
             var version = match.Value;
 
+            var conversion = ConvertDisplayNameToProduct(application.DisplayName);
+
             // %APPDATA%\(JetBrains|Google)\<product><version>
             var configDirectoryPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                application.DisplayName == "Android Studio" ? "Google" : "JetBrains",
-                ConvertDisplayNameToProduct(application.DisplayName) + version
-            );
+                application.DisplayName == "Android Studio" ? "Google" : "JetBrains");
+            if (!Directory.Exists(configDirectoryPath))
+            {
+                Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): Config directory not found or invalid: {configDirectoryPath}");
+                continue;
+            }
+
+            var flMatch = Directory.GetDirectories(configDirectoryPath)
+                .Where(file => Regex.IsMatch(Path.GetFileName(file),
+                @$"{conversion}{version}"))
+                .Select(file => new FileInfo(file))
+                .OrderByDescending(fi => fi.LastWriteTimeUtc).FirstOrDefault().Name;
+            if (flMatch == null)
+            {
+                Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): Could not find matching directory: {conversion}{version}");
+                continue;
+            }
+
+            configDirectoryPath = Path.Combine(configDirectoryPath, flMatch);
             if (!Directory.Exists(configDirectoryPath))
             {
                 Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): Config directory not found or invalid: {configDirectoryPath}");
@@ -185,7 +205,7 @@ internal static class RecentProjectsReader
                 }
 
                 //convert timestamp to DateTime
-                var timestamp =entry.SelectSingleNode("value/RecentProjectMetaInfo/option[@name='projectOpenTimestamp']")?.Attributes?["value"]?.Value;
+                var timestamp = entry.SelectSingleNode("value/RecentProjectMetaInfo/option[@name='projectOpenTimestamp']")?.Attributes?["value"]?.Value;
                 if (timestamp is null)
                 {
                     continue;
