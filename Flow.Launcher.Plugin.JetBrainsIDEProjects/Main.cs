@@ -14,7 +14,14 @@ namespace Flow.Launcher.Plugin.JetBrainsIDEProjects
         public void Init(PluginInitContext context)
         {
             _context = context;
-            _settings = context.API.LoadSettingJsonStorage<Settings.Settings>();
+            if (_context?.API != null)
+            {
+                _settings = _context.API.LoadSettingJsonStorage<Settings.Settings>();
+            }
+            else
+            {
+                _settings = new Settings.Settings();
+            }
         }
 
         /// <inheritdoc />
