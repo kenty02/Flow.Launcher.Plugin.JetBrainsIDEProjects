@@ -120,7 +120,8 @@ internal static class RecentProjectsReader
                 .Where(file => Regex.IsMatch(Path.GetFileName(file),
                 @$"{conversion}{version}"))
                 .Select(file => new FileInfo(file))
-                .OrderByDescending(fi => fi.LastWriteTimeUtc).FirstOrDefault().Name;
+                .OrderByDescending(fi => fi.LastWriteTimeUtc).FirstOrDefault()
+                ?.Name;
             if (flMatch == null)
             {
                 Console.WriteLine($"Skipping {application.DisplayName} ({application.DisplayVersion}): Could not find matching directory: {conversion}{version}");
