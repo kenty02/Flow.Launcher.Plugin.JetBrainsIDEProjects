@@ -63,8 +63,7 @@ internal static class RecentProjectsReader
                 Directory.GetParent(path)
                     ?.GetFiles("*.ico")
                     .FirstOrDefault()
-                    ?.FullName
-                ?? throw new FileNotFoundException("Failed to determine application icon file.");
+                    ?.FullName;
 
             applications.Add(new ApplicationInfo
             {
